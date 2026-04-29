@@ -1,161 +1,176 @@
-# CiberSecurity App
+# Cyberthreat Intelligence Agent
 
-A web application designed for cybersecurity analysis, allowing authenticated users to scan files, URLs, and IP addresses for potential threats using the VirusTotal API, WhoisXMLAPI and an LLM from OpenAI. It features a Vue.js frontend, multiple FastAPI backends, and utilizes Docker Compose for orchestration.
+Cyberthreat Intelligence Agent is a multi-service cybersecurity platform for analyzing files, URLs, and IP indicators. It combines threat intelligence providers (VirusTotal and WhoisXMLAPI) with LLM-assisted context generation (OpenAI), and exposes capabilities through a Vue frontend and FastAPI services behind Kong API Gateway.
 
-## Features
+## Architecture
 
-*   **File Analysis:** Upload files to scan for malware and known threats via VirusTotal.
-*   **URL Analysis:** Submit URLs to check against VirusTotal's database of malicious sites.
-*   **IP Address Analysis:** Check the reputation and history of IP addresses with VirusTotal.
-*   **Advanced URL Analysis:** In-depth URL scanning capabilities (including phishing, malware checks, SSL verification, and Whois verification).
-*   **User Authentication:** Secure user login and management provided by Auth0.
-*   **API Gateway:** Centralized API routing and management via Kong.
+![Architecture diagram](./architecture.png)
 
-*(Note: Frontend analysis features currently use simulated responses and require full backend integration.)*
+## Core Capabilities
 
-## Technology Stack
+- **File analysis:** Submit files for malware/threat scanning.
+- **URL analysis:** Inspect URLs against known malicious infrastructure.
+- **IP analysis:** Retrieve reputation and historical threat signals for IPs.
+- **Advanced URL checks:** Enrichment including phishing/malware indicators, SSL details, and WHOIS context.
+- **MCP-enabled enrichment:** Uses MCP workflows to orchestrate additional intelligence/context.
+- **Gateway-first API exposure:** Kong centralizes routing for backend services.
+- **Auth-ready frontend:** Auth0 integration scaffold is present in the web client.
 
-*   **Frontend:** Vue.js 3, Vuetify, TypeScript, Auth0 Client SDK
-*   **Backend (VirusTotal Service):** Python 3, FastAPI, Uvicorn, `aiohttp` (for VT API), OpenAI.
-*   **Backend (MCP Service):** Python 3, FastAPI, Uvicorn, MCP (Model Context Protocol from Anthropic) to use external/internal tools and data to enrich responses, and OpenAI.
-*   **Database:** PostgreSQL (Separate instances for VT service and MCP service)
-*   **API Gateway:** Kong
-*   **Containerization:** Docker, Docker Compose
-*   **Database Management:** Adminer
+## Tech Stack
 
-## Project Structure
-```
-├── Backend/ # FastAPI application for VirusTotal integration (Service: api)
-│ ├── config/ # Configuration files (e.g., vt_client.py)
-│ ├── .env # CREATE 1ST .env file
-│ ├── Dockerfile
-│ └── requirements.txt
-├── Frontend/ # Vue.js frontend application
-│ ├── public/
-│ ├── src/
-│ ├── auth_config.json # Auth0 configuration (Client-side)
-│ ├── Dockerfile # (Optional: If building/serving frontend via Docker)
-│ └── package.json
-├── mcp-client/ # Additional FastAPI service (Service: fastapi)
-│ ├── .env CREATE 2nd .env file
-│ └── Dockerfile
-├── kong/ # Kong API Gateway configuration
-│ └── kong.yml
-├── pg_db/ # Init scripts for the mcp-client database (db_mcp)
-│ └── init.sql
-├── .gitignore # Git ignore rules
-├── .env (CREATE EN EMPTY .env file here)
-├── docker-compose.yml # Docker Compose configuration for all services
+- **Frontend:** Vue 3, TypeScript, Vite, Vuetify, Vue Router, Axios, Auth0 Vue SDK
+- **Backend services:** Python, FastAPI, Uvicorn, OpenAI SDK, MCP SDK
+- **Threat intelligence:** VirusTotal API, WhoisXMLAPI
+- **Data layer:** PostgreSQL (separate DB instances for services)
+- **Gateway and platform:** Kong, Docker, Docker Compose, Kubernetes manifests
+- **Ops utilities:** Adminer
+
+## Repository Structure
+
+```text
+.
+├── Backend/                # FastAPI service for VirusTotal-focused workflows
+│   ├── config/
+│   ├── Dockerfile
+│   └── requirements.txt
+├── Frontend/               # Vue application
+│   ├── src/
+│   ├── auth_config.json
+│   ├── Dockerfile
+│   └── package.json
+├── mcp-client/             # FastAPI service integrating MCP-based flows
+│   ├── main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── mcp-server/             # MCP server implementation
+├── kong/                   # Kong declarative config
+│   └── kong.yml
+├── pg_db/                  # DB init scripts
+│   └── init.sql
+├── k8s/                    # Kubernetes manifests for deployment
+├── docker-compose.yml
 └── README.md
 ```
 
 ## Prerequisites
 
-*   [Docker](https://docs.docker.com/get-docker/)
-*   [Docker Compose](https://docs.docker.com/compose/install/) (Usually included with Docker Desktop)
-*   VirusTotal API Key ([Get one here](https://developers.virustotal.com/reference/getting-started))
-*   Auth0 Account and Application configured ([Auth0](https://auth0.com/))
-*   OpenAI API Key
-*   WhoisXMLAPI API Key
+- [Docker Desktop](https://docs.docker.com/get-docker/)
+- VirusTotal API key
+- OpenAI API key
+- WhoisXMLAPI key
+- Auth0 tenant + application (for frontend auth setup)
 
 ## Setup and Running
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/jonathans2200/CiberSecurity-app.git
-    cd CiberSecurity-app
-    ```
-
-2.  **Configure Environment Variables:**
-
-    *   **Crear un archivo .env**
-
-        **For ./Backend:**
-        *  OpenAI API Key:
-        OPENAI_KEY=your-openai-api-key-here
-        * VirusTotal API Key: 
-        VT_KEY=your-virustotal-api-key-here
-        * Database connection URL:
-        DATABASE_URL_API=postgresql://postgres:postgres@db:5432/virustotaldb
-        * Auth0 Client ID: 
-        AUTH0_CLIENT_ID=your-auth0-client-id-here
-        * Auth0 Domain:
-        AUTH0_DOMAIN=your-auth0-domain-here
-
-        **For ./mcp-client:**
-        *  OpenAI API Key:
-        OPENAI_API_KEY=your-openai-api-key-here
-        * VirusTotal API Key: 
-        VT_API_KEY=your-virustotal-api-key-here
-        * Database connection URL:
-        DATABASE_URL=postgresql://pguser:pgpass@db_mcp:5432/cybersec
-        * MCP Server CMD: 
-        MCP_SERVER_CMD=python mcp_server.py
-        * WhoisXMLAPI API Key:
-        WHOIS_API_KEY=your-WhoisXMLAPI-here
-
-        **For the root, .env is necessary, leave it blank.**
-
-    *   **Backend (VirusTotal Service):**
-        *   Create `Backend/.env`
-        *   Populate `Backend/.env`
-
-    *   **Backend (MCP Service):**
-        *   Create `mcp-client/.env`
-        *   Populate `mcp-client/.env`
-
-    *   **Frontend (Auth0):**
-        *   Configure `Frontend/auth_config.json` with your Auth0 Domain, Client ID, and Audience. The audience should match the identifier for your backend APIs secured by Auth0 (e.g., `https://securescan.com/api/v3/`).
-
-3.  **Build and Start Containers:**
-    Run the following command from the project root directory:
-    ```bash
-    docker-compose up --build -d
-    ```
-    *   `--build`: Forces Docker to rebuild the images if the Dockerfiles or their contexts have changed.
-    *   `-d`: Runs the containers in detached mode (in the background).
-
-4.  **Accessing Services:**
-    Once the containers are up, the services should be accessible at:
-    *   **Kong Gateway (Proxy):** `http://localhost:8002` (Your primary access point for backend APIs)
-    *   **Kong Admin API:** `http://localhost:8003`
-    *   **VirusTotal Backend API (Direct):** `http://localhost:8000` (Service name: `api`)
-    *   **MCP Backend API (Direct):** `http://localhost:8001` (Service name: `fastapi`)
-    *   **Adminer (Database GUI):** `http://localhost:8081`
-    *   **Frontend:** Access depends on how it's served. If running locally during development (e.g., `npm run serve` from `Frontend/`), it's often `http://localhost:5173` (Vite default) or `http://localhost:8080`. If served via Docker/Kong, it would likely be accessed through the Kong Gateway port (`8002`). *(This needs clarification based on deployment strategy)*
-
-## Configuration
-
-*   **Environment Variables:** Critical configuration (API keys, database URLs) is managed via `.env` files in the respective service directories (`Backend/`, `mcp-client/`). **Do not commit `.env` files to Git.**
-*   **API Routing:** Kong handles routing requests from the gateway (`:8002`) to the backend services. Configuration is defined in `kong/kong.yml`.
-*   **Authentication:** Auth0 configuration is split:
-    *   `Frontend/auth_config.json` for the Vue client.
-    *   Backend services will need to be configured to validate JWTs issued by your Auth0 tenant, using the specified Audience.
-
-## API Endpoints
-
-The main backend API endpoints are exposed via the **Kong Gateway** (`http://localhost:8002`). Refer to the `kong/kong.yml` configuration and the FastAPI application code (`Backend/main.py`, `mcp-client/main.py` for specific routes. Some include:
-
-*   `/logs` (GET)
-*   `/analyze` (POST)
-*   `/advanced-analysis` (POST)
-
-*(Authentication using JWT Bearer tokens obtained via Auth0 is not yet implemented)*
-
-## Stopping the Application
-
-To stop all running containers defined in the `docker-compose.yml`:
+### 1) Clone the Repository
 
 ```bash
-docker-compose down
+git clone https://github.com/da-ros/Cyberthreat-Intelligence-Agent.git
+cd Cyberthreat-Intelligence-Agent
 ```
 
-To stop and remove volumes (clears database data):
+### 2) Prepare Environment Files
+
+Create these files before starting containers:
+
+1. `Backend/.env`
+2. `mcp-client/.env`
+3. Root `.env` (required by `docker-compose.yml`; leave it blank)
+
+> Important: Do not commit `.env` files to git.
+
+### 3) Configure `Backend/.env`
+
+Use the following values as a baseline:
+
+```env
+OPENAI_KEY=your-openai-api-key
+VT_KEY=your-virustotal-api-key
+DATABASE_URL_API=postgresql://postgres:postgres@db:5432/virustotaldb
+AUTH0_CLIENT_ID=your-auth0-client-id
+AUTH0_DOMAIN=your-auth0-domain
+```
+
+### 4) Configure `mcp-client/.env`
+
+Use:
+
+```env
+OPENAI_API_KEY=your-openai-api-key
+VT_API_KEY=your-virustotal-api-key
+DATABASE_URL=postgresql://pguser:pgpass@db_mcp:5432/cybersec
+MCP_SERVER_CMD=python mcp_server.py
+WHOIS_API_KEY=your-whoisxmlapi-key
+```
+
+### 5) Configure Frontend Auth0
+
+Update `Frontend/auth_config.json` with your Auth0 values:
+
+- `domain`
+- `clientId`
+- `audience`
+
+The audience should match the backend API identifier configured in Auth0.
+
+### 6) Build and Start the Stack
+
+From the project root:
 
 ```bash
-docker-compose down -v
+docker compose up --build -d
 ```
+
+What this does:
+
+- `--build` rebuilds images from Dockerfiles.
+- `-d` runs everything in detached/background mode.
+
+### 7) Verify Services
+
+After startup, expected local endpoints are:
+
+- **Kong proxy:** `http://localhost:8002`
+- **Kong admin:** `http://localhost:8003`
+- **VT backend (direct):** `http://localhost:8000`
+- **MCP client backend (direct):** `http://localhost:8001`
+- **Adminer:** `http://localhost:8081`
+- **Frontend (Docker):** `http://localhost:3000`
+
+### 8) Stop Services
+
+Stop all services:
+
+```bash
+docker compose down
+```
+
+Stop and remove volumes (this clears DB data):
+
+```bash
+docker compose down -v
+```
+
+Notes:
+- `docker compose` is the modern Compose CLI.
+- If you see a warning about `version` in `docker-compose.yml`, it is safe but you can remove the field.
+
+## API Surface (High Level)
+
+Primary routes are exposed through Kong (`http://localhost:8002`) and mapped in `kong/kong.yml`, with backend handlers in `Backend/main.py` and `mcp-client/main.py`.
+
+Common routes include:
+
+- `GET /logs`
+- `POST /analyze`
+- `POST /advanced-analysis`
+
+## Security Notes
+
+- Never commit `.env` files or production secrets.
+- Validate Auth0 JWT enforcement status before production exposure.
+- Restrict Kong Admin API access outside local/dev networks.
 
 ## License
 
-**MIT**
+MIT
