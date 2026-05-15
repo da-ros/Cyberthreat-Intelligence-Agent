@@ -33,8 +33,8 @@ Cyberthreat Intelligence Agent is a multi-service cybersecurity platform for ana
   - **Standard** (`/analyze`) — VT results + OpenAI summary for quick, readable assessments.
   - **Advanced** (`/advanced-analysis` → MCP microservice) — deeper enrichment, longer technical reports, and PDF output.
 - **LLM-powered reporting:** OpenAI turns raw API payloads into structured narratives with risk summaries and mitigation guidance.
-- **MCP tool orchestration:** The agent layer calls WHOIS, AbuseIPDB, PDF export, and DB persistence only when the indicator type requires it.
-- **Automatic entity routing:** URL flows trigger WHOIS; IP flows trigger AbuseIPDB; file/archive flows use VT data alone.
+- **MCP tool orchestration:** The agent layer calls WHOIS, PDF export, and DB persistence when the indicator type requires it.
+- **Automatic entity routing:** URL flows trigger WHOIS enrichment; IP and file/archive flows rely on VirusTotal data plus LLM analysis.
 - **VirusTotal polling:** Waits for queued VT analyses before enrichment so reports use completed scan data.
 - **PDF export & storage:** Markdown reports are rendered to PDF and saved in PostgreSQL (`reports` table) with JSON metadata.
 - **Audit history:** Query past analyses via `/logs` with filters by type and date range.
@@ -89,14 +89,12 @@ The MCP server (`mcp-server/mcp_server.py`) exposes the following tools to the L
 | Tool | Description |
 |------|-------------|
 | `whois_lookup` | Fetches fresh WHOIS data for a domain from **WhoisXMLAPI**. |
-| `abuse_ipdb_lookup` | Retrieves IP reputation and abuse reports from **AbuseIPDB** (last 90 days). |
 | `export_pdf` | Converts a markdown threat report into a PDF (via markdown2 + WeasyPrint). |
 | `save_report` | Persists the analyzed indicator, structured report JSON, and PDF bytes to **PostgreSQL** (`reports` table). |
 
 **Environment variables used by MCP tools** (set in `mcp-client/.env` or the MCP server runtime):
 
 - `WHOIS_API_KEY` — WhoisXMLAPI
-- `ABUSEIPDB_API_KEY` — AbuseIPDB
 - `DATABASE_URL` — PostgreSQL connection for `save_report`
 
 ## Prerequisites
@@ -105,7 +103,6 @@ The MCP server (`mcp-server/mcp_server.py`) exposes the following tools to the L
 - VirusTotal API key
 - OpenAI API key
 - WhoisXMLAPI key
-- AbuseIPDB API key (for MCP `abuse_ipdb_lookup`)
 - Auth0 tenant + application (for frontend auth setup)
 
 ## Setup and Running
@@ -149,7 +146,6 @@ VT_API_KEY=your-virustotal-api-key
 DATABASE_URL=postgresql://pguser:pgpass@db_mcp:5432/cybersec
 MCP_SERVER_CMD=python mcp_server.py
 WHOIS_API_KEY=your-whoisxmlapi-key
-ABUSEIPDB_API_KEY=your-abuseipdb-api-key
 ```
 
 ### 5) Configure Frontend Auth0
